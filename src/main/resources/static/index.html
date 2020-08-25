@@ -2,14 +2,19 @@
 <head>
     <meta charset="UTF-8">
     <title>Docker容器console连接工具</title>
+    <link rel="stylesheet" href="lib/bootstrap-3.4.1/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="lib/bootstrap-3.4.1/css/bootstrap-theme.min.css"/>
     <link rel="stylesheet" href="/webjars/xterm/4.8.1/css/xterm.css"/>
+    <script type="application/javascript" src="lib/jquery-3.5.1/jquery.min.js"></script>
+    <script type="application/javascript" src="lib/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="lib/art-template-4.13.2/template-web.js"></script>
     <script type="application/javascript" src="/webjars/xterm/4.8.1/lib/xterm.js"></script>
     <script type="application/javascript" src="/webjars/xterm-addon-attach/0.3.0/lib/xterm-addon-attach.js"></script>
+    <script type="application/javascript" src="lib/axios-0.20.0/axios.min.js"></script>
     <style>
 
         #xterm {
             float: left;
-            width: 950px;
             height: 850px;
             background: #000;
             color: #fff;
@@ -20,55 +25,127 @@
             margin-top: 400px;
         }
 
-        .container-info {
-            margin-block-end: 5px;
+        #control-panel {
+            float: left;
+            padding: 15px;
+
         }
 
-        .container-info input {
-            margin-right: 10px;
-            height: 26px;
+        #table-container {
+            max-height: 787px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
-        .container-info select {
-            margin-right: 10px;
-            height: 26px;
-            width: 100px;
+        ul {
+            list-style: none;
+            padding-left: 0;
         }
 
-        .container-info button {
-            cursor: pointer;
-            margin-left: 10px;
+        td {
+            display:table-cell;
+            vertical-align: middle !important;
         }
 
     </style>
 </head>
 <body>
-<form class="container-info">
-    <span>宿主IP：</span>
-    <input id="ip" autocomplete="on"/>
-    <span>web端口：</span>
-    <input id="port" value="2375"/>
-    <span>容器ID：</span>
-    <input id="id"/>
-    <span>命令：</span>
-    <select id="command">
-        <option>/bin/ash</option>
-        <option selected>/bin/bash</option>
-        <option>/bin/sh</option>
-    </select>
-    <button type="button" onclick="link()">连接</button>
-    <button type="button" onclick="location.reload()">刷新</button>
-</form>
-<div id="xterm">
-    <h1>等待连接...</h1>
+<div class="row">
+    <div class="col-md-6" id="xterm">
+        <h1>等待连接...</h1>
+    </div>
+    <div class="col-md-6" id="control-panel">
+        <form class="form-inline row">
+            <div class="col-md-10">
+                <label for="ip">宿主地址：</label>
+                <input type="text" class="form-control" id="ip" placeholder="请输入IP"/>
+                <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                <label for="port">web端口：</label>
+                <input type="text" class="form-control" id="port" placeholder="请输入REST端口" value="2375"/>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-primary" onclick="listContainers()">获取容器列表</button>
+            </div>
+        </form>
+        <div id="table-container">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th width="50">序号</th>
+                    <th>容器信息</th>
+                </tr>
+                </thead>
+                <tbody id="container-list">
+                <tr>
+                    <td class="text-center" colspan="20">暂无数据</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 </body>
+<script type="text/html" id="container-list-temp">
+    {{if data.length > 0}}
+    {{each data container index}}
+    <tr>
+        <td>{{index+1}}</td>
+        <td>
+            <ul>
+                <li>
+                    <label>名称：</label>
+                    <span>{{getContainerName(container.Names)}}</span>
+                </li>
+                <li>
+                    <label>ID：</label>
+                    <span>{{container.Id}}</span>
+                </li>
+                <li>
+                    <label>镜像：</label>
+                    <span>{{container.Image}}</span>
+                </li>
+                <li>
+                    <label>状态：</label>
+                    <span>{{container.State}}</span>
+                </li>
+                <li>
+                    <label>操作：</label>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary btn-xs dropdown-toggle" data-toggle="dropdown">
+                            连接
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" onclick='link("{{container.Id}}", "/bin/ash")'>/bin/ash</a></li>
+                            <li><a href="#" onclick='link("{{container.Id}}", "/bin/bash")'>/bin/bash</a></li>
+                            <li><a href="#" onclick='link("{{container.Id}}", "/bin/sh")'>/bin/sh</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </td>
+    </tr>
+    {{/each}}
+    {{else}}
+    <tr>
+        <td class="text-center" colspan="20">暂无数据</td>
+    </tr>
+    {{/if}}
+</script>
 <script type="application/javascript">
 
-    function link() {
-        let ip = document.getElementById("ip").value;
-        let port = document.getElementById("port").value;
-        let id = document.getElementById("id").value;
+    template.defaults.imports.getContainerName = function (names) {
+        for (let i = 0; i < names.length; i++) {
+            return names[0].substring(1);
+        }
+        return "未知";
+    }
+
+    let ip, port;
+
+    function listContainers() {
+        ip = document.getElementById("ip").value;
+        port = document.getElementById("port").value;
         let valid = true;
         if (ip == "") {
             valid = false;
@@ -78,25 +155,26 @@
             valid = false;
             alert("请输入有效web端口");
         }
-        if (id == "") {
-            valid = false;
-            alert("请输入有效容器ID");
-        }
         if (valid) {
-            let command = document.getElementById("command").value;
-            open(ip, port, id, command);
+            axios.get("/rest/listContainers?ip=" + ip + "&port=" + port).then(function (response) {
+                let data = response.data;
+                console.log(data);
+                let html = template("container-list-temp", response);
+                $("#container-list").html(html);
+            });
         }
     }
 
-    function open(ip, port, id, command) {
-        let dom = document.getElementById('xterm');
-        dom.innerText = "";
+    function link(id, command) {
+        let $dom = $("#xterm");
+        $dom.html("");
+        $dom.css('background', 'unset');
         let term = new Terminal({
             cursorBlink: true,
             cols: 100,
             rows: 50
         });
-        term.open(dom);
+        term.open($dom[0]);
         let socket = new WebSocket('ws://' + window.location.host + '/ws/container/exec?width=100&height=50&ip=' + ip
             + '&port=' + port
             + '&containerId=' + id
