@@ -26,11 +26,13 @@ public class ContainerExecHandshakeInterceptor extends HttpSessionHandshakeInter
         String ip = servletRequest.getParameter("ip");
         Integer port = Integer.parseInt(servletRequest.getParameter("port"));
         String containerId = servletRequest.getParameter("containerId");
+        String command = servletRequest.getParameter("command");
         String width = servletRequest.getParameter("width");
         String height = servletRequest.getParameter("height");
         attributes.put("ip", ip);
         attributes.put("port", port);
         attributes.put("containerId", containerId);
+        attributes.put("command", command);
         attributes.put("width", width);
         attributes.put("height", height);
         return super.beforeHandshake(request, response, wsHandler, attributes);

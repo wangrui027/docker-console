@@ -31,10 +31,11 @@ public class ContainerExecWSHandler extends TextWebSocketHandler {
         String ip = session.getAttributes().get("ip").toString();
         Integer port = Integer.parseInt(session.getAttributes().get("port").toString());
         String containerId = session.getAttributes().get("containerId").toString();
+        String command = session.getAttributes().get("command").toString();
         String width = session.getAttributes().get("width").toString();
         String height = session.getAttributes().get("height").toString();
         //创建bash
-        String execId = createExec(ip, port, containerId);
+        String execId = createExec(ip, port, containerId, command);
         //连接bash
         Socket socket = connectExec(ip, port, execId);
         //获得输出
@@ -52,9 +53,9 @@ public class ContainerExecWSHandler extends TextWebSocketHandler {
      * @return 命令id
      * @throws Exception
      */
-    private String createExec(String ip, Integer port, String containerId) throws Exception {
+    private String createExec(String ip, Integer port, String containerId, String command) throws Exception {
         return DockerHelper.query(ip, port, docker -> {
-            ExecCreation execCreation = docker.execCreate(containerId, new String[]{"/bin/bash"},
+            ExecCreation execCreation = docker.execCreate(containerId, new String[]{command},
                     DockerClient.ExecCreateParam.attachStdin(), DockerClient.ExecCreateParam.attachStdout(), DockerClient.ExecCreateParam.attachStderr(),
                     DockerClient.ExecCreateParam.tty(true));
             return execCreation.id();

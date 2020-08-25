@@ -21,7 +21,7 @@
         }
 
         .container-info {
-            margin-bottom: 10px;
+            margin-block-end: 5px;
         }
 
         .container-info input {
@@ -29,22 +29,36 @@
             height: 26px;
         }
 
+        .container-info select {
+            margin-right: 10px;
+            height: 26px;
+            width: 100px;
+        }
+
         .container-info button {
             cursor: pointer;
+            margin-left: 10px;
         }
 
     </style>
 </head>
 <body>
-<div class="container-info">
+<form class="container-info">
     <span>宿主IP：</span>
-    <input id="ip"/>
+    <input id="ip" autocomplete="on"/>
     <span>web端口：</span>
     <input id="port" value="2375"/>
     <span>容器ID：</span>
     <input id="id"/>
-    <button onclick="link()">连接</button>
-</div>
+    <span>命令：</span>
+    <select id="command">
+        <option>/bin/ash</option>
+        <option selected>/bin/bash</option>
+        <option>/bin/sh</option>
+    </select>
+    <button type="button" onclick="link()">连接</button>
+    <button type="button" onclick="location.reload()">刷新</button>
+</form>
 <div id="xterm">
     <h1>等待连接...</h1>
 </div>
@@ -69,11 +83,12 @@
             alert("请输入有效容器ID");
         }
         if (valid) {
-            open(ip, port, id);
+            let command = document.getElementById("command").value;
+            open(ip, port, id, command);
         }
     }
 
-    function open(ip, port, id) {
+    function open(ip, port, id, command) {
         let dom = document.getElementById('xterm');
         dom.innerText = "";
         let term = new Terminal({
@@ -84,7 +99,8 @@
         term.open(dom);
         let socket = new WebSocket('ws://' + window.location.host + '/ws/container/exec?width=100&height=50&ip=' + ip
             + '&port=' + port
-            + '&containerId=' + id);
+            + '&containerId=' + id
+            + '&command=' + command);
         let attachAddon = new AttachAddon.AttachAddon(socket);
         term.loadAddon(attachAddon);
     }
