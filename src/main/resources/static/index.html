@@ -1,0 +1,93 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Docker容器console连接工具</title>
+    <link rel="stylesheet" href="/webjars/xterm/4.8.1/css/xterm.css"/>
+    <script type="application/javascript" src="/webjars/xterm/4.8.1/lib/xterm.js"></script>
+    <script type="application/javascript" src="/webjars/xterm-addon-attach/0.3.0/lib/xterm-addon-attach.js"></script>
+    <style>
+
+        #xterm {
+            float: left;
+            width: 950px;
+            height: 850px;
+            background: #000;
+            color: #fff;
+        }
+
+        #xterm h1 {
+            text-align: center;
+            margin-top: 400px;
+        }
+
+        .container-info {
+            margin-bottom: 10px;
+        }
+
+        .container-info input {
+            margin-right: 10px;
+            height: 26px;
+        }
+
+        .container-info button {
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container-info">
+    <span>宿主IP：</span>
+    <input id="ip"/>
+    <span>web端口：</span>
+    <input id="port" value="2375"/>
+    <span>容器ID：</span>
+    <input id="id"/>
+    <button onclick="link()">连接</button>
+</div>
+<div id="xterm">
+    <h1>等待连接...</h1>
+</div>
+</body>
+<script type="application/javascript">
+
+    function link() {
+        let ip = document.getElementById("ip").value;
+        let port = document.getElementById("port").value;
+        let id = document.getElementById("id").value;
+        let valid = true;
+        if (ip == "") {
+            valid = false;
+            alert("请输入有效宿主IP");
+        }
+        if (port == "") {
+            valid = false;
+            alert("请输入有效web端口");
+        }
+        if (id == "") {
+            valid = false;
+            alert("请输入有效容器ID");
+        }
+        if (valid) {
+            open(ip, port, id);
+        }
+    }
+
+    function open(ip, port, id) {
+        let dom = document.getElementById('xterm');
+        dom.innerText = "";
+        let term = new Terminal({
+            cursorBlink: true,
+            cols: 100,
+            rows: 50
+        });
+        term.open(dom);
+        let socket = new WebSocket('ws://' + window.location.host + '/ws/container/exec?width=100&height=50&ip=' + ip
+            + '&port=' + port
+            + '&containerId=' + id);
+        let attachAddon = new AttachAddon.AttachAddon(socket);
+        term.loadAddon(attachAddon);
+    }
+
+</script>
+</html>
