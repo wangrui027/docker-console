@@ -23,6 +23,7 @@ import java.util.Map;
  */
 @Component
 public class ContainerExecWSHandler extends TextWebSocketHandler {
+
     private Map<String, ExecSession> execSessionMap = new HashMap<>();
 
     @Override
@@ -117,7 +118,7 @@ public class ContainerExecWSHandler extends TextWebSocketHandler {
         }
         OutPutThread outPutThread = new OutPutThread(inputStream, session);
         outPutThread.start();
-        execSessionMap.put(containerId, new ExecSession(ip, port, containerId, socket, outPutThread));
+        execSessionMap.put(session.getId(), new ExecSession(ip, port, containerId, socket, outPutThread));
     }
 
     /**
@@ -139,12 +140,10 @@ public class ContainerExecWSHandler extends TextWebSocketHandler {
      *
      * @param session
      * @param closeStatus
-     * @throws Exception
      */
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-        String containerId = session.getAttributes().get("containerId").toString();
-        ExecSession execSession = execSessionMap.get(containerId);
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
+        ExecSession execSession = execSessionMap.get(session.getId());
         if (execSession != null) {
             execSession.getOutPutThread().interrupt();
         }
@@ -159,8 +158,7 @@ public class ContainerExecWSHandler extends TextWebSocketHandler {
      */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String containerId = session.getAttributes().get("containerId").toString();
-        ExecSession execSession = execSessionMap.get(containerId);
+        ExecSession execSession = execSessionMap.get(session.getId());
         OutputStream out = execSession.getSocket().getOutputStream();
         out.write(message.asBytes());
         out.flush();
